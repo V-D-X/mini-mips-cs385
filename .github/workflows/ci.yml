@@ -1,0 +1,112 @@
+# GitHub Actions workflow for automatically testing MIPS CPU Verilog code.
+# This workflow runs whenever code is pushed to `main`, `develop`, or `pipeline_dev`,
+# or when a pull request (PR) is opened against those branches.
+
+name: MIPS CPU CI/CD Pipeline
+
+on:
+  # Run CI/CD pipeline on pushes to important branches
+  push:
+    branches:
+      - main
+      - develop
+      - pipeline_dev  # Add more team-wide branches here if needed
+
+  # Run CI/CD pipeline on pull requests targeting important branches
+  pull_request:
+    branches:
+      - main
+      - develop
+
+  # Allow manual triggering of this workflow
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Use the latest version of Ubuntu as the environment to run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout the repository (download the code from GitHub)
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Install necessary dependencies (Verilog tools)
+      - name: Install Dependencies
+        run: |
+          sudo apt update  # Update package list
+          sudo apt install -y verilator iverilog gtkwave  # Install Verilog tools
+
+      # 3️⃣ Run Verilator linting to check for syntax and logic issues
+      - name: Run Verilator Linting (Strict)
+        run: |
+          verilator --lint-only -Wall -Wpedantic -Wno-fatal --trace --assert $(find src -name "*.v")
+          
+          # Explanation of flags:
+          # -Wall      → Enable all common warnings
+          # -Wpedantic → Enforce strict Verilog rules (helps catch potential issues)
+          # -Wno-fatal → Prevent warnings from stopping the linting process immediately
+          # --trace    → Enable waveform tracing (useful for debugging later)
+          # --assert   → Enable assertion checking (helps verify logical correctness)
+
+      # 4️⃣ Run Verilog formatting check (optional, helps keep code clean)
+      - name: Run Verilog Formatting Check (Optional)
+        run: |
+          if command -v verilog_format &> /dev/null; then
+            verilog_format -i $(find src -name "*.v")
+          else
+            echo "⚠️ Verilog formatting tool not installed, skipping..."
+          fi
+          
+          # What this does:
+          # - If `verilog_format` exists, it auto-formats all Verilog files in `src/`
+          # - If not installed, it simply prints a warning and skips formatting
+
+      # 5️⃣ Find and run ALL Verilog testbenches in the `test/` directory
+      - name: Find and Run All Tests
+        run: |
+          test_failures=0  # Initialize a counter to track failing tests
+          
+          # Loop through all Verilog test files in `test/` and run them
+          for test_file in $(find test -name "*.v"); do
+            test_name=$(basename "$test_file" .v)  # Extract the filename without extension
+            echo "🚀 Running test: $test_name"  # Print which test is running
+            
+            # Compile the testbench using Icarus Verilog (iverilog)
+            iverilog -o testbench_$test_name -I src "$test_file"
+            
+            # Run the compiled testbench, and if it fails, increment failure counter
+            vvp testbench_$test_name || test_failures=$((test_failures+1))
+          done
+
+          # Print the total number of failed tests
+          echo "Total test failures: $test_failures"
+          
+          # Save the number of test failures as an environment variable for later steps
+          echo "TEST_FAILURES=$test_failures" >> $GITHUB_ENV
+
+      # 6️⃣ Check if the commit is on a "protected branch" (important branches like `main`, `develop`, etc.)
+      - name: Check If Commit Is on a Protected Branch
+        run: |
+          # Get the current branch name
+          BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's|refs/heads/||')
+
+          # Define which branches should be "protected" (where all tests MUST pass)
+          PROTECTED_BRANCHES=("main" "develop" "pipeline_dev")
+
+          # If committing to a protected branch, enforce strict test passing
+          if [[ " ${PROTECTED_BRANCHES[@]} " =~ " ${BRANCH_NAME} " ]]; then
+            echo "🔴 Commit is on a protected branch ($BRANCH_NAME). Enforcing test success."
+            
+            # If any tests failed, stop the workflow and mark it as failed
+            if [ "$TEST_FAILURES" -gt 0 ]; then
+              echo "❌ CI/CD failed due to test failures on a protected branch!"
+              exit 1  # Exit with an error to fail the workflow
+            fi
+          else
+            echo "🟡 Commit is on a personal branch ($BRANCH_NAME). Allowing failures."
+          fi
+          
+          # Explanation:
+          # - If a commit is made to `main`, `develop`, or `pipeline_dev`, CI/CD will fail if any test fails.
+          # - If the commit is on a personal/feature branch, failures are allowed (to let developers debug).
