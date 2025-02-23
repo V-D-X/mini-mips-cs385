@@ -18,57 +18,55 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    # Use the latest Ubuntu environment
+  linting:
     runs-on: ubuntu-latest
-
+    container: mjccdev/verilog-test-env
     steps:
-      # 1️⃣ Checkout the repository
       - name: Checkout Repository
         uses: actions/checkout@v3
+      
+      - name: Run Verilator Linting
+        run: verilator --lint-only -Wall -Wpedantic -Wno-fatal --trace --assert $(find src -name "*.v")
 
-      # 2️⃣ Install necessary dependencies (Verilog tools)
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y verilator iverilog gtkwave
-
-      # 3️⃣ Run Verilator linting for syntax & logic issues
-      - name: Run Verilator Linting (Strict)
-        run: |
-          verilator --lint-only -Wall -Wpedantic -Wno-fatal --trace --assert $(find src -name "*.v")
-
-      # 4️⃣ Run Verilog formatting check (Optional)
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
       - name: Run Verilog Formatting Check
         run: |
-          if command -v verilog_format &> /dev/null; then
             verilog_format -i $(find src -name "*.v")
-          else
-            echo "⚠️ Verilog formatting tool not installed, skipping..."
-          fi
 
-      # 5️⃣ Find and run ALL Verilog testbenches in `test/`
-      - name: Find and Run All Tests
+  testing:
+    runs-on: ubuntu-latest
+    needs: [linting, formatting]  # Run after linting & formatting
+    container: mjccdev/verilog-test-env
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      # Run all testbenches in the test/ directory
+      - name: Run Verilog Testbenches
         run: |
           test_failures=0  # Initialize failure counter
           
           # Loop through all test files in `test/`
           for test_file in $(find test -name "*.v"); do
             test_name=$(basename "$test_file" .v)
-            echo "🚀 Running test: $test_name"
-
+            echo "Running test: $test_name"
+            
             # Compile testbench
             iverilog -o testbench_$test_name -I src "$test_file"
-
-            # Run the testbench; if it fails, increment failure count
+            
+            # Run testbench; increment failure count if it fails
             vvp testbench_$test_name || test_failures=$((test_failures+1))
           done
-
+          
           # Save failure count as an environment variable
-          echo "Total test failures: $test_failures"
           echo "TEST_FAILURES=$test_failures" >> $GITHUB_ENV
 
-      # 6️⃣ Ensure tests pass on `main`; allow failures on feature branches
+      # Ensure tests pass on `main`, but allow failures on feature branches
       - name: Enforce Test Success on Protected Branches
         run: |
           # Get the current branch name
@@ -76,12 +74,11 @@ jobs:
 
           # Enforce strict test passing only on `main`
           if [[ "$BRANCH_NAME" == "main" ]]; then
-            echo "🔴 Commit is on the protected `main` branch. Enforcing test success."
-
+            echo "Commit is on the protected `main` branch. Enforcing test success."
             if [ "$TEST_FAILURES" -gt 0 ]; then
-              echo "❌ CI/CD failed due to test failures on `main`!"
+              echo "CI/CD failed due to test failures on `main`"
               exit 1  # Fail the workflow
             fi
           else
-            echo "🟡 Commit is on a feature branch ($BRANCH_NAME). Allowing test failures for debugging."
+            echo "Commit is on a feature branch ($BRANCH_NAME). Allowing test failures for debugging."
           fi
