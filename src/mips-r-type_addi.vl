@@ -93,7 +93,7 @@ module CPU (clock,PC,ALUOut,IR);
   assign B  = (ALUSrc) ? SignExtend: RD2;   // ALUSrc Mux 
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit - first 8 bytes are the sign of IR[7], concatenate these together for 16-bit output to ALU
   reg_file rf (IR[11:10],IR[9:8],WR,ALUOut,RegWrite,A,RD2,clock);
-  alu fetch (4'b_0010,PC,2,NextPC,Unused);  // 2 because our simple CPU has 2-byte words
+  alu fetch (4'b0010,PC,16'd2,NextPC,Unused);  // 2 because our simple CPU has 2-byte words
   alu ex (ALUctl, A, B, ALUOut, Zero);
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUctl}); // get directly from ALU since we got rid of the funct field thing
   always @(negedge clock) begin 
