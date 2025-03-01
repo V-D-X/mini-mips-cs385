@@ -104,7 +104,7 @@ endmodule
 // Test module
 module test ();
   reg clock;
-  wire signed [16:0] WD,IR,PC;
+  wire signed [15:0] WD,IR,PC;
   CPU test_cpu(clock,PC,WD,IR);
   always #1 clock = ~clock;
   initial begin
