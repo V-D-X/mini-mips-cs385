@@ -63,18 +63,26 @@ endmodule
 //========================
 // Main Control Unit
 //========================
-module MainControl (Op, Control); // this is the code representation of the table on the board; we must implement the whole thing
+module MainControl (Op, Control);
   // Inputs:
-  input [3:0] Op;  // 4-bit Opcode from instruction field; indicated by arrow down on top of table
+  input [3:0] Op;  // 4-bit Opcode from instruction field
 
   // Outputs:
-  output reg [6:0] Control; // Control Signals for CPU execution; indicated by arrow up on top of table
+  output reg [6:0] Control; // Control Signals for CPU execution
 
-  // Control Signals: RegDst, ALUSrc, RegWrite, ALUctl (direct ALU control for our simplified CPU model)
-  always @(Op) case (Op)            // write a line for each instruction in the table. TODO: how did he make the table? tied to how ALU works
-    4'b0000: Control = 7'b101_0010; // ADD (R-Type, Register-Register Arithmetic)
-    4'b0111: Control = 7'b011_0010; // ADDI (Immediate Arithmetic)
-    // TODO: add the remaining R-types in this format
+  // Control Signals: RegDst_ALUSrc_RegWrite_ALUctl
+  always @(Op) case (Op)
+    // R-type instructions
+    4'b0000: Control = 7'b1_0_1_0010;  // add  | rd, rs, rt | rd =   rs + rt
+    4'b0001: Control = 7'b1_0_1_0110;  // sub  | rd, rs, rt | rd =   rs - rt
+    4'b0010: Control = 7'b1_0_1_0000;  // and  | rd, rs, rt | rd =   rs & rt
+    4'b0011: Control = 7'b1_0_1_0001;  // or   | rd, rs, rt | rd =   rs | rt
+    4'b0100: Control = 7'b1_0_1_1100;  // nor  | rd, rs, rt | rd = ~(rs | rt)
+    4'b0101: Control = 7'b1_0_1_1101;  // nand | rd, rs, rt | rd = ~(rs % rt)
+    4'b0110: Control = 7'b1_0_1_0111;  // slt  | rd, rs, rt | rd =  (rs < rt) ? 1 : 0
+
+    // I-type instructions
+    4'b0111: Control = 7'b0_1_1_0010;  // addi | rd, rs, const8 | rd = rs + const8
   endcase
 endmodule
 
