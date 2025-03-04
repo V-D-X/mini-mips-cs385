@@ -5,7 +5,7 @@
 //========================
 // Register File Module
 //========================
-module reg_file (RR1, RR2, WR, WD, RegWrite, RD1, RD2, clock); // adapted for 16-bit CPU
+module reg_file (RR1, RR2, WR, WD, RegWrite, RD1, RD2, clock);
   // Inputs:
   input [1:0] RR1, RR2;  // Register Read Addresses (2-bit, since we have only 4 registers: $0-$3)
   input [1:0] WR;        // Register Write Address
@@ -106,7 +106,7 @@ module CPU (clock, PC, ALUOut, IR);
   // ===========================
   initial begin 
     // Sample Instructions (16-bit MIPS encoding)
-    // R-type format: opcode_rs_rt_rd
+    // R-type format: opcode_rs_rt_rd_unused6
     // I-type format: opcode_rs_rd_const8
     IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)
     IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2=7) 
