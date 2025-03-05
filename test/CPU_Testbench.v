@@ -1,0 +1,18 @@
+module CPU_Testbench ();
+  reg clock;
+  wire signed [15:0] wd, ir, pc;
+  
+  // Instantiate CPU
+  SimpleMIPS_CPU test_cpu(clock, pc, wd, ir);
+  
+  // Clock Generation (Toggle every 1 time unit)
+  always #1 clock = ~clock;
+  
+  // Test Execution
+  initial begin
+    $display ("Clock  PC   IR                                 WD");
+    $monitor ("%b     %2d   %b  %3d (%b)", clock, pc, ir, wd, wd);
+    clock = 1;
+    #16 $finish;
+  end
+endmodule
