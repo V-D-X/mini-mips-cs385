@@ -11,6 +11,27 @@ module CPU (clock, pc, alu_out, ir);
   wire [3:0] alu_ctl;           // ALU control signals (determines ALU operation)
   wire [1:0] wr;                // Register write address
   wire [15:0] ir, next_pc, a, b, alu_out, rd2, sign_extend;
+
+  // ===========================
+  // Test Program
+  // ===========================
+  // Hardcoded in the absence of full instruction memory support
+
+  // Instruction Formats:
+  // - R-type: opcode | rs | rt | rd | unused6
+  // - I-type: opcode | rs | rd | const8
+
+  initial begin 
+    i_memory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)
+    i_memory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2=7) 
+    i_memory[2] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3=7)
+    i_memory[3] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2=8)
+    i_memory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)
+    i_memory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)
+    i_memory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32)
+    i_memory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1=0)
+    i_memory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1=1)
+  end
   
   // Initialize pc to 0
   initial pc = 0;
