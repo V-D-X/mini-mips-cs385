@@ -6,10 +6,10 @@ module CPU_Testbench ();
   // Instantiate CPU
   CPU test_cpu(clock, pc, wd, ir);
 
-  //Clock Generation (Toggle every 1 time unit)
+  // Clock pulse generation (toggle every 1 time unit)
   always #1 clock = ~clock;
 
-  //Test Execution
+  // Test execution
   initial begin
     $display ("Clock  PC  IR                                   WD");
     $monitor ("%b     %2d   %b  %3d (%b)", clock, pc, ir, wd, wd);
