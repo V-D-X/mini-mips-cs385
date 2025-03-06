@@ -11,7 +11,7 @@ module CPU_Testbench ();
 
   //Test Execution
   initial begin
-    $display ("Clock  PC    IR                                 WD");
+    $display ("Clock  PC  IR                                   WD");
     $monitor ("%b     %2d   %b  %3d (%b)", clock, pc, ir, wd, wd);
     clock = 1;
     #16 $finish;
