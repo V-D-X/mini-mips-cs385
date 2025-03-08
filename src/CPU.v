@@ -46,8 +46,8 @@ module CPU (clock, pc, alu_out, ir);
   
   // CPU Components
   RegisterFile rf (ir[11:10], ir[9:8], wr, alu_out, reg_write, a, rd2, clock); // Register file
-  ALU fetch (4'b0010, pc, 16'd2, next_pc, unused); // pc + 2 for next instruction fetch (our simple CPU has 2-byte words)
-  ALU ex (alu_ctl, a, b, alu_out, zero); // ALU execution stage
+  ALU_16bit fetch (4'b0010, pc, 16'd2, next_pc, unused); // pc + 2 for next instruction fetch (our simple CPU has 2-byte words)
+  ALU_16bit ex (alu_ctl, a, b, alu_out, zero); // ALU execution stage
   MainControl main_ctr (ir[15:12], {reg_dst, alu_src, reg_write, alu_ctl}); // Control unit (pull directly from ALU — no dedicated ALU control module in mini-MIPS)
   
   // Program Counter Update
