@@ -8,6 +8,7 @@ module CPU (clock, pc, alu_out, ir);
   // Internal Registers and Wires:
   reg [15:0] pc;                // Program counter (holds current instruction address)
   reg [15:0] i_memory[0:1023];  // Instruction memory (holds test program instructions)
+  reg [15:0] d_memory[0:1023];  // Data memory (holds test program data)
   wire [3:0] alu_ctl;           // ALU control signals (determines ALU operation)
   wire [1:0] wr;                // Register write address
   wire [15:0] ir, next_pc, a, b, alu_out, rd2, sign_extend;
@@ -15,23 +16,34 @@ module CPU (clock, pc, alu_out, ir);
   // ===========================
   // Test Program
   // ===========================
-  // Hardcoded in the absence of full instruction memory support
 
   // Instruction Formats:
   // - R-type: opcode | rs | rt | rd | unused6
   // - I-type: opcode | rs | rd | const8
 
-  initial begin 
-    i_memory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)
-    i_memory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2=7) 
-    i_memory[2] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3=7)
-    i_memory[3] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2=8)
-    i_memory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)
-    i_memory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)
-    i_memory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32)
-    i_memory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1=0)
-    i_memory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1=1)
-  end
+  // Program: Swap memory cells if needed and compute absolute value of (t1 - t2)
+  i_memory[0]  = 16'b1000_00_01_0000_0000;  // lw   $t1, 0($0)       ; Load word from d_memory[0] into $t1
+  i_memory[1]  = 16'b1000_00_10_0000_0100;  // lw   $t2, 4($0)       ; Load word from d_memory[4] into $t2
+  i_memory[2]  = 16'b0110_01_10_11_000000;  // slt  $t3, $t1, $t2    ; $t3 = ($t1 < $t2) ? 1 : 0
+
+  i_memory[3]  = 16'b1010_11_00_0000_0010;  // beq  $t3, $0, +2      ; If $t1 >= $t2, skip swap (branch to i_memory[6])
+  // i_memory[3] = 16'b1011_11_00_0000_0010;  // bne  $t3, $0, +2      ; If $t1 < $t2, skip swap (branch to i_memory[6])
+
+  i_memory[4]  = 16'b1001_01_00_0000_0100;  // sw   $t1, 4($0)       ; Store $t1 into d_memory[4]
+  i_memory[5]  = 16'b1001_10_00_0000_0000;  // sw   $t2, 0($0)       ; Store $t2 into d_memory[0]
+  i_memory[6]  = 16'b1000_00_01_0000_0000;  // lw   $t1, 0($0)       ; Reload $t1 from d_memory[0]
+  i_memory[7]  = 16'b1000_00_10_0000_0100;  // lw   $t2, 4($0)       ; Reload $t2 from d_memory[4]
+  i_memory[8]  = 16'b0100_10_10_10_000000;  // nor  $t2, $t2, $t2    ; Bitwise NOT of $t2 (first step of two's complement negation)
+  i_memory[9]  = 16'b0111_10_10_0000_0001;  // addi $t2, $t2, 1      ; $t2 = -$t2 (complete two's complement)
+  i_memory[10] = 16'b0000_01_10_11_000000;  // add  $t3, $t1, $t2    ; $t3 = $t1 - $t2 (now absolute value)
+
+  // Test Data Variant 1
+  d_memory[0] = 32'd5;  // Initial value at address 0
+  d_memory[1] = 32'd7;  // Initial value at address 4
+
+  // Test Data Variant 2
+  // d_memory[0] = 32'd7;  // Use to test behavior with larger value first
+  // d_memory[1] = 32'd5;
   
   // Initialize pc to 0
   initial pc = 0;
