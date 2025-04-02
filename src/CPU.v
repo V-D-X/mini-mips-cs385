@@ -11,6 +11,7 @@ module CPU (clock, pc, alu_out, ir);
   wire [3:0] alu_ctl;           // ALU control signals (determines ALU operation)
   wire [1:0] wr;                // Register write address
   wire [15:0] ir, next_pc, a, b, alu_out, rd2, sign_extend;
+  wire reg_write, unused, zero, reg_dst, alu_src;
 
   // ===========================
   // Test Program
@@ -40,8 +41,8 @@ module CPU (clock, pc, alu_out, ir);
   assign ir = i_memory[pc >> 1]; // Fetch instruction from memory (divide pc by 2 for 16-bit words instead of 4 for 32-bit words)
   
   // Instruction Decode Stage
-  assign wr = (reg_dst) ? ir[7:6] : ir[9:8]; // Select destination register (reg_dst Mux)
-  assign b  = (alu_src) ? sign_extend : rd2;  // Choose between immediate value or register (alu_src Mux)
+  Mux2to1 reg_dst_mux(ir[9:8], ir[7:6], reg_dst, wr);   // Select destination register (reg_dst Mux)
+  Mux2to1 alu_src_mux(rd2, sign_extend, alu_src, b);    // Choose between immediate value or register (alu_src Mux)
   assign sign_extend = {{8{ir[7]}}, ir[7:0]}; // Sign extension (first 8 bits are the sign of ir[7], concatenate these together for 16-bit output to ALU)
   
   // CPU Components
