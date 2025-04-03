@@ -24,16 +24,16 @@ module CPU (clock, pc, alu_out, ir);
 
   // Program: Swap memory cells if needed and compute absolute value of (t1 - t2)
   i_memory[0]  = 16'b1000_00_01_0000_0000;  // lw   $t1, 0($0)       ; Load word from d_memory[0] into $t1
-  i_memory[1]  = 16'b1000_00_10_0000_0100;  // lw   $t2, 4($0)       ; Load word from d_memory[4] into $t2
+  i_memory[1]  = 16'b1000_00_10_0000_0010;  // lw   $t2, 2($0)       ; Load word from d_memory[1] into $t2
   i_memory[2]  = 16'b0110_01_10_11_000000;  // slt  $t3, $t1, $t2    ; $t3 = ($t1 < $t2) ? 1 : 0
 
   i_memory[3]  = 16'b1010_11_00_0000_0010;  // beq  $t3, $0, +2      ; If $t1 >= $t2, skip swap (branch to i_memory[6])
   // i_memory[3] = 16'b1011_11_00_0000_0010;  // bne  $t3, $0, +2      ; If $t1 < $t2, skip swap (branch to i_memory[6])
 
-  i_memory[4]  = 16'b1001_01_00_0000_0100;  // sw   $t1, 4($0)       ; Store $t1 into d_memory[4]
+  i_memory[4]  = 16'b1001_01_00_0000_0010;  // sw   $t1, 2($0)       ; Store $t1 into d_memory[1]
   i_memory[5]  = 16'b1001_10_00_0000_0000;  // sw   $t2, 0($0)       ; Store $t2 into d_memory[0]
   i_memory[6]  = 16'b1000_00_01_0000_0000;  // lw   $t1, 0($0)       ; Reload $t1 from d_memory[0]
-  i_memory[7]  = 16'b1000_00_10_0000_0100;  // lw   $t2, 4($0)       ; Reload $t2 from d_memory[4]
+  i_memory[7]  = 16'b1000_00_10_0000_0010;  // lw   $t2, 2($0)       ; Reload $t2 from d_memory[1]
   i_memory[8]  = 16'b0100_10_10_10_000000;  // nor  $t2, $t2, $t2    ; Bitwise NOT of $t2 (first step of two's complement negation)
   i_memory[9]  = 16'b0111_10_10_0000_0001;  // addi $t2, $t2, 1      ; $t2 = -$t2 (complete two's complement)
   i_memory[10] = 16'b0000_01_10_11_000000;  // add  $t3, $t1, $t2    ; $t3 = $t1 - $t2 (now absolute value)
