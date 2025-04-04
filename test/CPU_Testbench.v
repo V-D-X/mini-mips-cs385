@@ -11,9 +11,13 @@ module CPU_Testbench ();
 
   // Test execution
   initial begin
+    $display();
     $display ("Clock  PC  IR                                   WD");
     $monitor ("%b     %2d   %b  %3d (%b)", clock, pc, ir, wd, wd);
     clock = 1;
-    #16 $finish;
+    #16;
+    $monitoroff;  // Stop monitoring changes to prevent unwanted outputs
+    $display("\nSimulation finished.");
+    $finish;
   end
 endmodule
