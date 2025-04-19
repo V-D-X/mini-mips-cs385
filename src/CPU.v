@@ -1,9 +1,9 @@
-module CPU (clock, pc, alu_out, ir);
+module CPU (clock, wd, ir, pc);
   // Inputs:
   input clock; // System clock
   
   // Outputs:
-  output [15:0] alu_out, ir, pc; // ALU result, Instruction Register, Program Counter
+  output [15:0] wd, ir, pc; // ALU result, Instruction Register, Program Counter
   
   // Internal Registers and Wires:
   reg [15:0] pc;                // Program counter (holds current instruction address)
@@ -11,8 +11,8 @@ module CPU (clock, pc, alu_out, ir);
   reg [15:0] d_memory[0:1023];  // Data memory (holds test program data)
   wire [3:0] alu_ctl;           // ALU control signals (determines ALU operation)
   wire [1:0] wr;                // Register write address
-  wire [15:0] ir, next_pc, a, b, alu_out, rd2, sign_extend;
-  wire reg_write, unused, zero, reg_dst, alu_src;
+  wire [15:0] ir, next_pc, a, b, alu_out, rd2, sign_extend, pcplus2, target;
+  wire unused1, unused2;
 
   // ===========================
   // Test Program
@@ -41,8 +41,8 @@ module CPU (clock, pc, alu_out, ir);
     i_memory[10] = 16'b0000_01_10_11_000000;  // add  $t3, $t1, $t2    ; $t3 = $t1 - $t2 (now absolute value)
 
     // Test Data Variant 1
-    d_memory[0] = 32'd5;  // Initial value at address 0
-    d_memory[1] = 32'd7;  // Initial value at address 4
+    d_memory[0] = 16'd5;  // Initial value at address 0
+    d_memory[1] = 16'd7;  // Initial value at address 4
 
     // Test Data Variant 2
     // d_memory[0] = 32'd7;  // Use to test behavior with larger value first
@@ -58,17 +58,22 @@ module CPU (clock, pc, alu_out, ir);
   
   // Instruction Decode Stage
   Mux2to1_2bit reg_dst_mux(ir[9:8], ir[7:6], reg_dst, wr); // Select destination register (reg_dst Mux)
-  Mux2to1_16bit alu_src_mux(rd2, sign_extend, alu_src, b); // Choose between immediate value or register (alu_src Mux)
+  Mux2to1_16bit branch_mux(pcplus2, target, branch_taken, next_pc);
+  Mux2to1_16bit alu_src_mux(rd2, sign_extend, alu_src, b);
+  Mux2to1_16bit wrt_to_reg_mux(alu_out, d_memory[alu_out>>1],mem_to_reg, wd); // Choose between immediate value or register (alu_src Mux)
   assign sign_extend = {{8{ir[7]}}, ir[7:0]}; // Sign extension (first 8 bits are the sign of ir[7], concatenate these together for 16-bit output to ALU)
+  BranchControl beq_or_bne (beq, bne, zero, branch_taken);
   
   // CPU Components
-  RegisterFile rf (ir[11:10], ir[9:8], wr, alu_out, reg_write, a, rd2, clock); // Register file
-  ALU_16bit fetch (4'b0010, pc, 16'd2, next_pc, unused); // pc + 2 for next instruction fetch (our simple CPU has 2-byte words)
+  RegisterFile rf (ir[11:10], ir[9:8], wr, wd, reg_write, a, rd2, clock); // Register file
+  ALU_16bit fetch (4'b0010, pc, 16'd2, pcplus2, unused1); // pc + 2 for next instruction fetch (our simple CPU has 2-byte words)
   ALU_16bit ex (alu_ctl, a, b, alu_out, zero); // ALU execution stage
-  MainControl main_ctr (ir[15:12], {reg_dst, alu_src, reg_write, alu_ctl}); // Control unit (pull directly from ALU — no dedicated ALU control module in mini-MIPS)
+  ALU_16bit branch (4'b0010, sign_extend << 1, pcplus2, target, unused2);
+  MainControl main_ctr (ir[15:12], {reg_dst, alu_src, mem_to_reg, reg_write, mem_write, beq, bne, alu_ctl}); // Control unit (pull directly from ALU — no dedicated ALU control module in mini-MIPS)
   
   // Program Counter Update
   always @(negedge clock) begin 
     pc <= next_pc; // Update pc at each clock cycle (on falling edge)
+    if (mem_write) d_memory[alu_out>>1] <= rd2;
   end
 endmodule
