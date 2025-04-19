@@ -1,23 +1,13 @@
 // Test module
-module CPU_Testbench ();
+module test ();
   reg clock;
   wire signed [15:0] wd, ir, pc;
-
-  // Instantiate CPU
-  CPU test_cpu(clock, pc, wd, ir);
-
-  // Clock pulse generation (toggle every 1 time unit)
+  CPU test_cpu(clock, wd, ir, pc);
   always #1 clock = ~clock;
-
-  // Test execution
   initial begin
-    $display();
-    $display ("Clock  PC  IR                                   WD");
-    $monitor ("%b     %2d   %b  %3d (%b)", clock, pc, ir, wd, wd);
+    $display ("PC  IR                                WD");
+    $monitor ("%2d  %b %2d (%b)",pc, ir, wd, wd);
     clock = 1;
-    #16;
-    $monitoroff;  // Stop monitoring changes to prevent unwanted outputs
-    $display("\nSimulation finished.");
-    $finish;
+    #20 $finish; // if extending test program, add +2 for each new line
   end
 endmodule
